@@ -1,0 +1,4 @@
+[docker_container]
+{% for i in cont_IP %}
+{{ i }} ansible_user=root ansible_ssh_pass=redhat ansible_connection=ssh
+{% endfor %}

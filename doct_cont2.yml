@@ -1,0 +1,17 @@
+- hosts: docker_container
+  tasks:
+    - name: "Installing httpd"
+      package: 
+        name: "httpd"
+        state: present
+
+    - name: "Copying content"
+      copy:
+        dest: '/var/www/html/index.html'
+        content: " This is testing page inside docker container "
+
+    - name: "Starting service"
+      command: "/usr/sbin/httpd"
+
+    - name: "Enabling httpd service"
+      shell: "echo '/usr/sbin/httpd' >> /etc/rc.local"

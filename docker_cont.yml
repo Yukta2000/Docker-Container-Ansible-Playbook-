@@ -1,0 +1,86 @@
+- hosts: localhost
+  tasks:
+#configure yum repository for docker
+    - name: "Configuring yum repository for docker" 
+      yum_repository:
+        baseurl: "https://download.docker.com/linux/centos/7/x86_64/stable"
+        name: "docker"
+        description: "Repo for docker"
+        gpgcheck: no
+  
+    - yum_repository:
+        baseurl: "file:///run/media/root/RHEL-8-0-0-BaseOS-x86_64/AppStream"
+        name: "dvd1"
+        description: "AppStream dvd"
+        gpgcheck: no
+
+    - yum_repository:
+        baseurl: "file:///run/media/root/RHEL-8-0-0-BaseOS-x86_64/BaseOS"
+        name: "dvd2"
+        description: "BaseOS dvd"
+        gpgcheck: no
+
+
+#install docker
+    - name: "Installing docker" 
+      shell: "yum install -y docker-ce --nobest"
+      ignore_errors: yes
+#start and enable docker services
+    - name: "Starting and enabling docker services" 
+      service:
+        name: "docker"
+        state: started
+        enabled: yes
+    - name: "Installing Docker sdk"
+      pip:
+        name: "docker"
+#pull docker image
+    - name: "Pulling centos ssh enabled image" 
+      docker_image:
+        name: "yukta06/centos_ssh:v3"
+      ignore_errors: yes
+
+ 
+#Launch docker container and expose it to public
+#copy html to container from managed node
+    - name: "Launch docker container" 
+      shell: "docker run -dit -p 8080:80 yukta06/centos_ssh:v3"
+
+#Retrieve container name
+    - name: "Retrieving container name"
+      shell: "docker ps -a --format '{% raw %}{{ .Names }}{% endraw %}'"
+      register: cont_name
+
+    - debug:
+        msg: "{{ cont_name.stdout_lines }}"
+      register: Name
+
+    - name: "Retrieving container info"
+      docker_container_info:
+        name: "{{ item }}"
+      loop: "{{ Name.msg }}"
+      register: cont_info
+
+    - name: "Retrieving number of containers"
+      debug:
+        msg: "{{ Name.msg | length }}"
+      register: os_num
+ 
+#Retrieve container IP  
+    - name: "Getting container IP"
+      vars:
+        IP: "{{ cont_info.results[item | int].container.NetworkSettings.IPAddress }}"
+      set_fact:
+        cont_IP: "{{ cont_IP | default([]) + [IP] }}"
+      loop: "{{ range(0, os_num.msg | int) | list }}"
+      when: "IP !=''"
+
+#Update inventory 
+    - name: "Updating inventory"
+      template:
+        dest: 'ip.txt'
+        src: 'ip_temp.yml'
+
+
+        
+
